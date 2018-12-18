@@ -1,6 +1,6 @@
 # php_mysql_lib
 
-# HOW TO USE
+## HOW TO USE
 
 # ABOUT config.php FILE
   Setup config.php and include it where your server site script..
