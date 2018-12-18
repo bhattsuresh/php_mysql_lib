@@ -2,10 +2,10 @@
 
 ## HOW TO USE
 
-# ABOUT config.php FILE
+### ABOUT config.php FILE
   Setup config.php and include it where your server site script..
   
-# ABOUT Classes.php FILE  
+### ABOUT Classes.php FILE  
   No need to include this file, it is already included by config file....
   Classes.php file contents some classes 
   Like->
