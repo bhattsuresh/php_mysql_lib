@@ -2,11 +2,11 @@
 
     /* app name*/
     
-    define('APP_NAME','Stall-Manager');
+    define('APP_NAME','YOUR APP NAME');
    
     /* Base url*/
 	
-   define('APP_URL','http://localhost/form1/');
+   define('APP_URL','http://localhost/');
     
     /* local Time zone */
     
@@ -16,15 +16,14 @@
 
 	define('DB_HOST','localhost');
     
-   define('DB_NAME','apisgyuy_form');
+   define('DB_NAME','DBNAME');
 	
-    define('DB_USER','apisgyuy_form');
+    define('DB_USER','USERNAME');
 
-    define('DB_PASS','uzaIH6*oF(@F');
+    define('DB_PASS','PASSWORD');
 	
 
-
-	define('DB_DRIVER','mysql');
+    define('DB_DRIVER','mysql');
 	
 	
 	
@@ -116,5 +115,5 @@ function info($info = null){
 }
 
 
-require_once __DIR__.'/libs/Classes.php';
+require_once __DIR__.'/Classes.php';
 Session::init();
