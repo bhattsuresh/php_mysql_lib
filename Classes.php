@@ -1,5 +1,25 @@
 <?php 
+class Email{
+	public static send($to,$subject=null,$message=null,$from = null,$cc = null){
+if(!$subject)
+	$subject = "No Mail subject given.";
 
+if($message)
+	$message = 'No message body given.';
+
+$headers = "MIME-Version: 1.0" . "\r\n";
+$headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
+
+if($from)
+	$headers .= 'From: <'.$from.'>' . "\r\n";
+if($cc)
+$headers .= 'Cc: '.$cc. "\r\n";
+
+return mail($to,$subject,$message,$headers);
+
+}
+ 
+}
 
 class Session {
     
