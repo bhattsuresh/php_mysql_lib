@@ -1,6 +1,6 @@
 <?php 
 class Email{
-	public static send($to,$subject=null,$message=null,$from = null,$cc = null){
+	public static function send($to,$subject=null,$message=null,$from = null,$cc = null){
 if(!$subject)
 	$subject = "No Mail subject given.";
 
