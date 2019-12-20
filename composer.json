@@ -1,0 +1,13 @@
+{
+    "name": "sb/php_mysql_lib",
+    "description": "for Simple project & small project",
+    "license": "MIT",
+    "type":"library",
+    "authors": [
+        {
+            "name": "Suresh Bhatt",
+            "email": "bhattsuresh09@gmail.com"
+        }
+    ]
+   
+}
