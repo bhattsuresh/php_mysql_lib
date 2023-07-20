@@ -1,17 +1,19 @@
 <?php 
+namespace SB;
+
 class Email{
-	public static function send($to,$subject=null,$message=null,$from = null,$cc = null){
+    public static function send($to,$subject=null,$message=null,$from = null,$cc = null){
 if(!$subject)
-	$subject = "No Mail subject given.";
+    $subject = "No Mail subject given.";
 
 if($message)
-	$message = 'No message body given.';
+    $message = 'No message body given.';
 
 $headers = "MIME-Version: 1.0" . "\r\n";
 $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
 
 if($from)
-	$headers .= 'From: <'.$from.'>' . "\r\n";
+    $headers .= 'From: <'.$from.'>' . "\r\n";
 if($cc)
 $headers .= 'Cc: '.$cc. "\r\n";
 
@@ -19,6 +21,19 @@ return mail($to,$subject,$message,$headers);
 
 }
  
+}
+
+
+class Response {
+    
+    public static function json($req = []){
+        header('Access-Control-Allow-Origin: *');
+        header("Access-Control-Allow-Methods: GET");
+        header("Allow: GET, POST, OPTIONS, PUT, DELETE");
+        header("Access-Control-Allow-Headers: X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Request-Method, Access-Control-Allow-Origin");
+        header('Content-type:Application/json');
+        echo json_encode($req);
+    }
 }
 
 class Session {
@@ -31,6 +46,15 @@ class Session {
     public static function put($key, $value) {
 
         $_SESSION[$key] = $value;
+    }
+
+     public static function all() {
+
+        if (isset($_SESSION)) {
+            return $_SESSION;
+        }
+
+        return null;
     }
 
     public static function get($key = false) {
@@ -71,7 +95,7 @@ class Session {
 
 
 class Status{
-	
+    
 public static function show($msg = null){
 if($msg != null):
 ?>
@@ -92,8 +116,8 @@ height:0px;\
 font-size: 2em;\
 display: table;}\
 .status{\
-	vertical-align: middle;\
-	display: table-cell;\
+    vertical-align: middle;\
+    display: table-cell;\
 }\
 </style>';
 document.write(css+html);
@@ -108,7 +132,7 @@ document.write(css+html);
         }).css( 'box-shadow', '4px 5px 21px 1px #00000000');
         $('.status').html('');
     },2000);
-	
+    
 
 </script>
 <?php
@@ -157,7 +181,18 @@ class Request{
         return $_SERVER['REQUEST_METHOD'];
       }
 
+ public static function get($name = false){
+       
+            if(!$name){
+                return $_REQUEST;
+            }else{
+                return isset($_REQUEST[$name]) ? $_REQUEST[$name] : null;
+            }
+        
 
+        return null;
+    
+    }
 
    public static function input($name = false){
         $method = self::method();
@@ -197,17 +232,89 @@ class Request{
 
     public static function uri(){
         $uri = isset($_GET['uri'])? $_GET['uri'] : '/';
+
         return  rtrim($uri,'/');
+    }
+
+
+    public static function curlGet($url){
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url); 
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15); 
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        
+        $result = curl_exec($ch);
+        curl_close($ch);
+
+        return $result;
+    }
+
+
+    public static function curlPost($url,$data){
+
+       if(!is_array($data) && 'object'== gettype($data))
+            $data = json_decode(json_encode($data),1);
+
+
+        $params = '';
+    foreach($data as $key=>$value):
+                $params .= $key.'='.$value.'&';
+    endforeach;            
+         
+    $params = rtrim($params, '&');
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url); 
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15); 
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_POST, count($data)); 
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $params); 
+  
+        $result = curl_exec($ch);
+        curl_close($ch);
+
+        return $result;
     }
 }
 
 
 
-class Pass{
-	 function __construct() {
+
+class Password{
+
+    private $privateKey;
+    private $salt;
+
+  function __construct() {
+    $this->privateKey = ENCRYPT_PRIVATE_KEY??'DEMOPVTKEY';
+    $this->salt = ENCRYPT_SALT??'DEMOSALT';
+  }
+
+
+    public function encrypt($string,$salt=""){
+
+        $encryptMethod  = "AES-256-CBC";
+        
+        $key     = hash('sha256', $this->privateKey);
+        $ivalue  = substr(hash('sha256', $this->salt.$salt), 0, 16); // sha256 is hash_hmac_algo
+        $result      = openssl_encrypt($string, $encryptMethod, $key, 0, $ivalue);
+        return $output = base64_encode($result);  // output is a encripted value
+    }
+
+    public function decrypt($stringEncrypt,$salt=""){
+        
+            $encryptMethod  = "AES-256-CBC";
+
+            $key    = hash('sha256', $this->privateKey);
+            $ivalue = substr(hash('sha256', $this->salt.$salt), 0, 16); // sha256 is hash_hmac_algo
+            return $output = openssl_decrypt(base64_decode($stringEncrypt), $encryptMethod, $key, 0, $ivalue);
         
     }
 
+    
     public static function set($data, $cost = 12) {
 
         $options = ['cost' => $cost];
@@ -240,26 +347,26 @@ class Pass{
 }
 
 
-// model class start
+// modelDB class start
 
 
-class Model extends PDO {
-
-    public function __construct() {
-        try {
-            parent::__construct(DSN, DB_USER, DB_PASS, array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'));
-        } catch (Exception $e) {
-            exit('<br><h2><br><center>!Config Error.<br><small style="color:gray">Setup your config.php file and enjoy :) </small></center></h2>');
-        }
+class Model{
+    public $pdo = null;    
+    public function __construct($db='LOCAL') {
+        $this->pdo = createDBConnection();
     }
 
-    /**
+    public function closeDBConnection(){
+        $this->pdo = null;
+    }
+
+   /**
      * Create table
      * @param string $table A name of table to insert into
      * @param string $data An associative array
      */
     function create_table($table, $data) {
-	
+    
         $sql = "CREATE TABLE IF NOT EXISTS $table (";
         $num = count($data);
         for ($i = 0; $i < $num - 1; $i++):
@@ -267,7 +374,9 @@ class Model extends PDO {
         endfor;
         $sql .= $data[$num - 1] . ");";
 
-        return $this->exec($sql);
+        $res =  $this->pdo->exec($sql);
+        $this->closeDBConnection();
+        return $res;
     }
 
     /**
@@ -280,14 +389,15 @@ class Model extends PDO {
 
         $fieldNames = implode('`, `', array_keys($data));
         $fieldValues = ':' . implode(', :', array_keys($data));
-        $sth = $this->prepare("INSERT INTO `$table` (`$fieldNames`) VALUES ($fieldValues)");
+        $sth = $this->pdo->prepare("INSERT INTO `$table` (`$fieldNames`) VALUES ($fieldValues)");
 
         foreach ($data as $key => $value) {
             $sth->bindValue(":$key", $value);
         }
 
-        $s = $sth->execute();
-        return $s;
+         $res = $sth->execute();
+        $this->closeDBConnection();
+        return $res;
     }
 
     /**
@@ -296,22 +406,29 @@ class Model extends PDO {
      * @param string $data An associative array
      * @param string $where the WHERE query part
      */
-    public function modify($table, $data,$where) {
+    public function modify($table, $data,$where,$whereData=array()) {
         ksort($data);
 
         $fieldDetails = NULL;
         foreach ($data as $key => $value) {
             $fieldDetails .= "`$key`=:$key,";
         }
+
         $fieldDetails = rtrim($fieldDetails, ',');
 
-        $sth = $this->prepare("UPDATE `$table` SET $fieldDetails  $where");
+        $sth = $this->pdo->prepare("UPDATE `$table` SET $fieldDetails  $where");
 
         foreach ($data as $key => $value) {
             $sth->bindValue(":$key", $value);
         }
 
-        $sth->execute();
+        foreach ($whereData as $k => $val) {
+            $sth->bindValue(":$k", $val);
+        }
+
+        $res = $sth->execute();
+        $this->closeDBConnection();
+        return $res;
     }
 
     /**
@@ -333,13 +450,13 @@ class Model extends PDO {
                    } $i++;
                 endforeach;
               
-                $pre = $this->prepare("SELECT $cols FROM $table WHERE $fields");
+                $pre = $this->pdo->prepare("SELECT $cols FROM $table WHERE $fields");
                 foreach ($where as $key => $value):
                     
                      $pre->bindValue(":$key", $value);
                  endforeach;
                  $pre->execute();
-                 return $pre->fetch(PDO::FETCH_ASSOC); 
+                 return $pre->fetch(\PDO::FETCH_ASSOC); 
          
     }
     
@@ -352,18 +469,18 @@ class Model extends PDO {
     public function fetch_row($table, $cols = '*', $where = false, $operator = '=') {
         if(!$where){
             
-        $pre = $this->prepare("SELECT $cols FROM $table");
+        $pre = $this->pdo->prepare("SELECT $cols FROM $table");
         $pre->execute();
-        return $pre->fetch(PDO::FETCH_ASSOC); 
+        return $pre->fetch(\PDO::FETCH_ASSOC); 
         }else{
             if(!is_array($where)){
                 
-               $pre = $this->prepare("SELECT $cols FROM $table $where");
+               $pre = $this->pdo->prepare("SELECT $cols FROM $table $where");
                $pre->execute();
-               return $pre->fetch(PDO::FETCH_ASSOC);  
+               return $pre->fetch(\PDO::FETCH_ASSOC);  
             }else{
                 
-               return $this->fetch_some($table, $cols, $where, $operator);
+               return $this->pdo->fetch_some($table, $cols, $where, $operator);
             }
         }
     }
@@ -375,65 +492,110 @@ class Model extends PDO {
      */
     public function fetch_rows($table, $cols = '*',$where = false) {
         if(!$where){
-            $pre = $this->prepare("SELECT $cols FROM $table");
+            $pre = $this->pdo->prepare("SELECT $cols FROM $table");
             
         }else{
           
-            $pre = $this->prepare("SELECT $cols FROM $table $where");
+            $pre = $this->pdo->prepare("SELECT $cols FROM $table $where");
         }
         $pre->execute();
-        return $pre->fetchAll(PDO::FETCH_OBJ);
+        return $pre->fetchAll(\PDO::FETCH_OBJ);
       
     }
     
-    public function fetch_one_assoc($table,$cols = '*',$where = false) {
+    public function fetch_one_assoc($table,$cols = '*',$where = false,$whereData = array()) {
         if(!$where){
-            $pre = $this->prepare("SELECT $cols FROM $table");
+            $pre = $this->pdo->prepare("SELECT $cols FROM $table");
             
         }else{
           
-            $pre = $this->prepare("SELECT $cols FROM $table $where");
+            $pre = $this->pdo->prepare("SELECT $cols FROM $table $where");
+            foreach ($whereData as $key => $value):
+                     $pre->bindValue(":$key", $value);
+            endforeach;
         }
         $pre->execute();
-        return $pre->fetch(PDO::FETCH_ASSOC);
-      
-    }
-    public function fetch_one_object($table,$cols = '*',$where = false) {
-        if(!$where){
-            $pre = $this->prepare("SELECT $cols FROM $table");
-            
-        }else{
-          
-            $pre = $this->prepare("SELECT $cols FROM $table $where");
-        }
-        $pre->execute();
-        return $pre->fetch(PDO::FETCH_OBJ);
-      
-    }
     
-    public function fetch_all_assoc($table,$cols = '*',$where = false) {
+
+        $data = $pre->fetch(\PDO::FETCH_ASSOC);
+        $this->closeDBConnection();
+        return $data;
+      
+    }
+
+
+
+
+
+    public function fetch_one_object($table,$cols = '*',$where = false,$whereData=array()) {
         if(!$where){
-            $pre = $this->prepare("SELECT $cols FROM $table");
+            $pre = $this->pdo->prepare("SELECT $cols FROM $table");
+            
+        }else{
+            $pre = $this->pdo->prepare("SELECT $cols FROM $table $where");
+            foreach ($whereData as $key => $value):
+                     $pre->bindValue(":$key", $value);
+            endforeach;
+        }
+        $pre->execute();
+
+        $data = $pre->fetch(\PDO::FETCH_OBJ);
+        $this->closeDBConnection();
+        return $data;
+      
+    }
+
+
+    
+    public function fetch_all_assoc($table,$cols = '*',$where = false,$whereData=array()) {
+        if(!$where){
+            $pre = $this->pdo->prepare("SELECT $cols FROM $table");
             
         }else{
           
-            $pre = $this->prepare("SELECT $cols FROM $table $where");
+            $pre = $this->pdo->prepare("SELECT $cols FROM $table $where");
+            foreach ($whereData as $key => $value):
+                     $pre->bindValue(":$key", $value);
+            endforeach;
         }
         $pre->execute();
-        return $pre->fetchAll(PDO::FETCH_ASSOC);
+        $data = $pre->fetchAll(\PDO::FETCH_ASSOC);
+        $this->closeDBConnection();
+        return $data;
       
     }
-    public function fetch_all_object($table,$cols = '*',$where = false) {
+    public function fetch_all_object($table,$cols = '*',$where = false,$whereData=array()) {
         if(!$where){
-            $pre = $this->prepare("SELECT $cols FROM $table");
+            $pre = $this->pdo->prepare("SELECT $cols FROM $table");
             
         }else{
      
-            $pre = $this->prepare("SELECT $cols FROM $table $where");
+            $pre = $this->pdo->prepare("SELECT $cols FROM $table $where");
+            foreach ($whereData as $key => $value):
+
+                if(is_int($value))
+                    $param = PDO::PARAM_INT;
+                elseif(is_bool($value))
+                    $param = PDO::PARAM_BOOL;
+                elseif(is_null($value))
+                    $param = PDO::PARAM_NULL;
+                elseif(is_string($value))
+                    $param = PDO::PARAM_STR;
+                else
+                    $param = FALSE;
+                    
+                if($param)
+                    $pre->bindValue(":$key",$value,$param);
+                else
+                    $pre->bindValue(":$key",$value);
+            endforeach;
         }
         $pre->execute();
-        return $pre->fetchAll(PDO::FETCH_OBJ);
-      
+        
+        $data =  $pre->fetchAll(\PDO::FETCH_OBJ);
+
+        $this->closeDBConnection();
+        return $data;
     }
     
 
@@ -442,9 +604,9 @@ class Model extends PDO {
      * @param string $table A name of table to get all data
      * @param string $where the WHERE query part
      */
-    public function fetch_type($table, $type = PDO::FETCH_OBJ, $limit = false,$cols = '*',$where = 1) {
+    public function fetch_type($table, $type = \PDO::FETCH_OBJ, $limit = false,$cols = '*',$where = 1) {
       
-        $pre = $this->prepare("SELECT $cols FROM $table $where");
+        $pre = $this->pdo->prepare("SELECT $cols FROM $table $where");
         $pre->execute();
         if(!$limit){
           
@@ -455,8 +617,8 @@ class Model extends PDO {
     }
     
     
-    public function fetch_sql($sql,$type = PDO::FETCH_OBJ) {
-        $pre = $this->prepare($sql);
+    public function fetch_sql($sql,$type = \PDO::FETCH_OBJ) {
+        $pre = $this->pdo->prepare($sql);
         $pre->execute();
         return $pre->fetchAll($type);
       }
@@ -477,12 +639,14 @@ class Model extends PDO {
                    } $i++;
                 endforeach;
               
-                $pre = $this->prepare("DELETE FROM $table WHERE $fields");
+                $pre = $this->pdo->prepare("DELETE FROM $table WHERE $fields");
                 foreach ($where as $key => $value):
                      $a[] = $value;
                  endforeach;
                  
-            return   $pre->execute($a);
+           $res = $pre->execute($a);
+            $this->closeDBConnection();
+        return $res;
          
        }
 
@@ -490,19 +654,19 @@ class Model extends PDO {
        protected function deleteData($table,$where) {
      
         $sql = "DELETE FROM $table $where";
-        return  $this->exec($sql);
+        return  $this->pdo->exec($sql);
          
        }
 
        
-	   public function customeDate($date=false) {
-		   $date=date_create("$date");
-			return date_format($date,"dS-M-Y");
-			
+       public function customeDate($date=false) {
+           $date=date_create("$date");
+            return date_format($date,"dS-M-Y");
+            
        }
        
        public function get_json($table){
-        $rows = $this->fetch_all_assoc($table);
+        $rows = $this->pdo->fetch_all_assoc($table);
 
 
         $out = "";
@@ -520,7 +684,7 @@ class Model extends PDO {
             }
             else{
             $out .= '"'.$col.'":"'  . $row[$col] . '",';
-            }	
+            }   
         
             if($i==count($cols)-1){
             $out .= '"'.$col.'":"'. $row[$col]     . '"}';
@@ -533,6 +697,13 @@ class Model extends PDO {
         
         return  $out;
        }
+
+
+
+        public function get_sql_qry($table,$cols = '*',$where = false){
+            return "SELECT $cols FROM $table $where";
+        }
+
 }
 
 
@@ -540,11 +711,15 @@ class Model extends PDO {
 
 
 
+
+
 class DB extends Model{
-	private $api = null;
+    private $api = null;
     protected $table = null;
     protected $select = null;
     protected $where = null;
+    protected $whereData = [];
+    protected $whereOrLike = null;
     protected $order = null;
     protected $group = null;
     protected $limit = null;
@@ -553,8 +728,9 @@ class DB extends Model{
 
 
 
-    public function __construct(){
-        parent::__construct();
+
+    public function __construct($db='LOCAL'){
+        parent::__construct($db);
     }
 
 
@@ -589,11 +765,11 @@ class DB extends Model{
         return $this->add($this->table,$data);
     }
 
-	public function insertGetId($data){
+    public function insertGetId($data){
         if($this->add($this->table,$data)){
-			return $this->lastInsertId();
-		}
-		return false;
+            return $this->pdo->lastInsertId();
+        }
+        return false;
     }
 
 
@@ -620,7 +796,8 @@ class DB extends Model{
         return $this;
     }
 
- 
+
+
     public function where($first, $second, $third = '',$flag=null){
      
         if(!$this->where){
@@ -629,22 +806,51 @@ class DB extends Model{
             $this->where .= ' AND '; 
         }
 
-        if($flag != null){
+        $key = str_replace('.', '_', $first);
+       
             if($third == ''){
-                $this->where .=  $first .' = '. "$second";
+                $this->where .=  $first .' = '. ":$key";
+                $this->whereData[$key] = $second;
             }else{
-                $this->where .=  $first .' '. $second .' '. "$third";
+                $this->where .=  $first .' '. $second .' '. ":$key";
+                
+                $this->whereData[$key] = $third;
             }
-         }else{
-
-        if($third == ''){
-            $this->where .=  $first .' = '. "'$second'";
-        }else{
-            $this->where .=  $first .' '. $second .' '. "'$third'";
-        }
-    }
+        
        return $this;
     }
+
+    public function whereIn($first, $second = array()){
+        
+        $value = "";
+            $cnt = count($second);
+            foreach ($second as $key => $sec) {
+                if(is_numeric($sec))
+                    $value .=  $sec;
+                else
+                    $value .=  "'".$sec."'";
+
+                if($key < $cnt-1){
+                    $value .=",";
+                }
+            }
+
+
+        if(!$this->where){
+            $this->where = 'WHERE '; 
+        }else{
+            $this->where .= ' AND '; 
+        }
+
+  
+        $this->where .=  $first ." IN($value)";
+        
+
+       return $this;
+    }
+
+
+
 
 
     public function whereOr($first, $second, $third = ''){
@@ -655,58 +861,193 @@ class DB extends Model{
             $this->where .= ' OR '; 
         }
 
+        $key = str_replace('.', '_', $first);
+
         if($third == ''){
-            $this->where .=  $first .' = '. "'$second'";
-        }else{
-            $this->where .=  $first .' '. $second .' '. "'$third'";
+                $this->where .=  $first .' = '. ":$key";
+                $this->whereData[$key] = $second;
+            }else{
+                $this->where .=  $first .' '. $second .' '. ":$key";
+                
+                $this->whereData[$key] = $third;
         }
+       return $this;
+    } 
+
+    public function whereLike($col, $val){
+     
+        if(!$this->whereOrLike){
+            $this->whereOrLike = ' AND ('; 
+        }else{
+            $this->whereOrLike .= ' OR '; 
+        }
+
+        $key = str_replace('.', '_', $col);
+       
+        $this->whereOrLike .=  $col .' LIKE '. ":$key";
+        $this->whereData[$key] = $val;
+        
        return $this;
     }
 
 
 
-   public function get(){
-     
-    $this->select = rtrim( $this->select,', ');
+   public function get($type = 'obj'){
+     if($this->select != "" && $this->select != null)
+        $this->select = rtrim( $this->select,', ');
+
     if($this->select == null){
         $this->select = '*';
     }
+
+    if($this->whereOrLike != null && $this->where != null){
+        $this->whereOrLike .= ') '; 
+        $this->where .= $this->whereOrLike;
+    }
+
+    if($type == 'obj'):
    
-    if(!$this->where)
-     $data = $this->fetch_all_object($this->table,$this->select ,$this->join.$this->group.$this->order.$this->limit);
-    else   
-     $data = $this->fetch_all_object($this->table,$this->select,$this->join.$this->where.$this->group.$this->order.$this->limit); 
-    
+        if(!$this->where)
+         $data = $this->fetch_all_object($this->table,$this->select ,$this->join.$this->group.$this->order.$this->limit);
+        else   
+         $data = $this->fetch_all_object($this->table,$this->select,$this->join.$this->where.$this->group.$this->order.$this->limit,$this->whereData); 
+        
+    else:
+
+        if(!$this->where)
+         $data = $this->fetch_all_assoc($this->table,$this->select ,$this->join.$this->group.$this->order.$this->limit);
+        else   
+         $data = $this->fetch_all_assoc($this->table,$this->select,$this->join.$this->where.$this->group.$this->order.$this->limit,$this->whereData); 
+
+    endif;
 
     return $data;
    }
 
 
+   public function getSql($flag = false)
+    {
+        $cols = $this->select;
+        $table = $this->table;
+        $whr2 = $this->whereOrLike != null ? $this->whereOrLike.')':'';
+         $whr =  $this->where . $whr2;
+        
+        $where = $this->join . $whr . $this->group . $this->order . $this->limit;
+        $cols = rtrim($cols, ', ');
 
+        if($cols == null){
+            $cols = '*';
+        }
 
-   public function first(){
-    $this->select = rtrim( $this->select,', ');
+        if($flag){
+            foreach ($this->whereData as $key => $value) {
+                $val = is_numeric($value) ? $value : "'$value'";
+               $where = str_replace(":$key", $val, $where);
+            }
+        }
+
+    
+        return "SELECT $cols FROM $table $where";
+    }
+
+   
+
+  
+   public function sql_qry_get($column = '*'){
+    
+        return  $this->get_sql_qry($this->table,$this->select,$this->join.$this->where.$this->group.$this->order.$this->limit); 
+   }
+   
+   public function fetch_by_sql($sql){
+        $data = $this->fetch_sql($sql); 
+        return count($data) == 1 ? $data[0] : $data;
+   }
+   
+   
+
+   public function first($type='obj'){
+      if($this->select != "" && $this->select != null)
+            $this->select = rtrim( $this->select,', ');
+
     if($this->select == null){
         $this->select='*';
     }
-    if(!$this->where)
-        $data = $this->fetch_one_object($this->table,$this->select ,$this->join.$this->group.$this->order.$this->limit);
-    else  
-        $data = $this->fetch_one_object($this->table,$this->select,$this->join.$this->where.$this->group.$this->order.$this->limit); 
+
+    if($type == 'obj'):
+        if(!$this->where)
+            $data = $this->fetch_one_object($this->table,$this->select ,$this->join.$this->group.$this->order.$this->limit);
+        else  
+            $data = $this->fetch_one_object($this->table,$this->select,$this->join.$this->where.$this->group.$this->order.$this->limit,$this->whereData);
+
+     else:
+             if(!$this->where)
+            $data = $this->fetch_one_assoc($this->table,$this->select ,$this->join.$this->group.$this->order.$this->limit);
+        else  
+            $data = $this->fetch_one_assoc($this->table,$this->select,$this->join.$this->where.$this->group.$this->order.$this->limit,$this->whereData);
+     endif;
   
     return $data;
    }
 
 
+
    public function count($column = '*'){
+    $whr = '';
+    if($this->whereOrLike != null && $this->where != null){
+            
+            $whr = $this->where . $this->whereOrLike. ') ';
+    }else if ($this->where != null) {
+        $whr = $whr = $this->where;
+    }
     
     if(!$this->where)
         $data = $this->fetch_one_object($this->table,'COUNT('.$column.') AS total'); 
     else 
-        $data = $this->fetch_one_object($this->table,'COUNT('.$column.') AS total',$this->where); 
+        $data = $this->fetch_one_object($this->table,'COUNT('.$column.') AS total',$this->join.$whr.$this->group.$this->order.$this->limit,$this->whereData); 
 
         return $data->total;
     
+   }
+
+
+    public function sum($column=null){
+        if(!$column)
+            return 0;
+
+
+    $whr = '';
+    if($this->whereOrLike != null && $this->where != null){
+            
+            $whr = $this->where . $this->whereOrLike. ') ';
+    }else if ($this->where != null) {
+        $whr = $whr = $this->where;
+    }
+    
+    if(!$this->where)
+        $data = $this->fetch_one_object($this->table,'SUM('.$column.') AS total'); 
+    else 
+        $data = $this->fetch_one_object($this->table,'SUM('.$column.') AS total',$this->join.$whr.$this->group.$this->order.$this->limit,$this->whereData); 
+
+        return $data->total;
+    
+   }
+
+   public function countGroup($column = '*'){
+    
+    if(!$this->where)
+        $data = $this->fetch_all_object($this->table,'COUNT('.$column.') AS total'); 
+    else 
+        $data = $this->fetch_all_object($this->table,'COUNT('.$column.') AS total',$this->join.$this->where.$this->group.$this->order.$this->limit,$this->whereData); 
+
+        return count($data);
+    
+   }
+
+
+   public function sql_qry($column = '*'){
+    
+        return  $this->get_sql_qry($this->table,'COUNT('.$column.') AS total',$this->join.$this->where.$this->group.$this->order.$this->limit); 
+
    }
 
 
@@ -738,22 +1079,24 @@ class DB extends Model{
     }
 
 
-    public function join($table, $first, $second, $third = null){
-        if($third == null) 
+    public function join($table, $first, $second, $third = null, $fourth=null){
+        if($third == null and $fourth == null) 
             $this->join .= ' JOIN '.$table.' ON '. $first .' = ' .$second.' ';
-        else
+        else if($fourth == null)
             $this->join .= ' JOIN '.$table.' ON '. $first .' '. $second . ' ' .$third.' ';
-
-        return $this;    
+        else
+            $this->join .= ' JOIN '.$table.' ON '. $first .' = '. $second . ' AND ' .$third.' = '.$fourth.' ';
+        return $this;   
     }
 
 
-    public function leftJoin($table, $first, $second, $third = null){
-        if($third == null) 
+    public function leftJoin($table, $first, $second, $third = null, $fourth=null){
+        if($third == null and $fourth == null) 
             $this->join .= ' LEFT JOIN '.$table.' ON '. $first .' = ' .$second.' ';
-        else
+        else if($fourth == null)
             $this->join .= ' LEFT JOIN '.$table.' ON '. $first .' '. $second . ' ' .$third.' ';
-            
+        else
+            $this->join .= ' LEFT JOIN '.$table.' ON '. $first .' = '. $second . ' AND ' .$third.' = '.$fourth.' ';
         return $this;    
     }
 
@@ -779,25 +1122,99 @@ class DB extends Model{
 
 
     public function delete(){
-     
-        $this->deleteData($this->table,$this->where);
-     
-    
-           
-        }
+        $this->deleteData($this->table,$this->where); 
+    }
 
 
 
     public function  update($data){
-          return  $this->modify($this->table, $data, $this->where);
-        }
-		
-	
-	public function create($data){
-		return $this->create_table($this->table,$data);
-	}	
-		
+        return  $this->modify($this->table, $data, $this->where,$this->whereData);
+    }
+        
+    
+    public function create($data){
+        return $this->create_table($this->table,$data);
+    }   
+        
 
 
 }
+
+
+
+
+
+class Router{
+    private $url = "";
+    private $routes = array();
+    private $methods = array();
+    private $request_methods = array();
+    function __construct(){
+
+        // $url = $_SERVER['REQUEST_URI'];
+        $route = isset($_REQUEST['route']) ? $_REQUEST['route'] : "" ;
+          $this->url = '/'.$route;
+       /* $d = explode('index.php', $url);
+        if(count($d)>1)
+            $this->url = end($d);
+
+        if(strpos($this->url,'?') >=0){
+            $exd = explode('?', $this->url);
+            $this->url = current($exd);
+        }*/
+    }
+
+
+    function get($url, $run){
+        
+
+        array_push($this->routes, $url);
+        array_push($this->methods, $run);
+        array_push($this->request_methods,'GET');
+        
+    }
+
+    function post($url, $run){
+        array_push($this->routes, $url);
+        array_push($this->methods, $run);
+        array_push($this->request_methods,'POST');
+         
+    }
+
+    
+
+    public function setup(){
+        if(!in_array($this->url, $this->routes)){
+              Response::json(array('status'=>false,'message'=>'Route not found!','code'=>404,'data'=>array()));
+              exit;
+            }else{
+                foreach($this->methods as $key => $value) {
+                    if($this->url == $this->routes[$key]){
+                        if($_SERVER["REQUEST_METHOD"] != $this->request_methods[$key]){
+                            $res = array('status'=>false,'message'=>'405 Method Not Allowed!','code'=>405,'data'=>array());
+                            Response::json($res);
+                            break;
+                        }
+
+                            
+                        if(is_callable($value)){
+                            Response::json($value());
+                                break;
+                        }else{
+                            $exCls = explode('@', $value);
+                            $obj = new $exCls[0];
+                            $req = $_POST;
+                            if(empty($req))
+                                $req = json_decode(file_get_contents('php://input'), true);
+                            $res = $obj->{$exCls[1]}($req);
+                            Response::json($res);
+                        }               
+                    }
+                            
+
+                }
+            }
+    }
+}
+
 
