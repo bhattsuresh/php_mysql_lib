@@ -14,7 +14,7 @@
     class Model,
     class DB,
     class Session,
-    class Pass,
+    class Password,
     class Storage,
     class Request,
     Class Status
